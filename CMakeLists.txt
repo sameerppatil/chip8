@@ -18,13 +18,19 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	endif()
 endif()
 
+if(WIN32)
+	set(CMAKE_CXX__FLAGS "${CMAKE_CXX_FLAGS}" -DWINDOWS)
+endif()
+
+set(CMAKE_CXX_STANDARD 14)
+
 set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake/;${CMAKE_MODULE_PATH}")
 set (SFML_ROOT "C:/mydrive/garage/sfml_stuff/SFML_251")
 find_package(SFML 2 COMPONENTS graphics window system network)
 
 if(SFML_FOUND)
 	include_directories(${SFML_INCLUDE_DIR})
-	message(STATUS "foo include dir: ${SFML_INCLUDE_DIR}")
+	message(STATUS "Including SFML directories: ${SFML_INCLUDE_DIR}")
 else()
 	message(FATAL_ERROR "SFML library could not be found")
 endif()
@@ -32,11 +38,14 @@ endif()
 include_directories("include")
 
 # Add source to this project's executable.
-add_executable (chip8_2 "src/chip8_2.cpp")
+add_executable (chip8_2 "src/chip8_2.cpp" "src/cpu.cpp" "src/game.cpp")
 
-target_link_libraries(chip8_2 ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
+target_link_libraries(chip8_2 ${SFML_LIBRARIES} ${SFML_DEPENDENCIES} -static)
 
 install(DIRECTORY Media DESTINATION ${PROJECT_BINARY_DIR}/Debug)
+
+install(DIRECTORY ROMs DESTINATION ${PROJECT_BINARY_DIR}/Debug)
+
 
 # TODO: Add tests and install targets if needed.
 

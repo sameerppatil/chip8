@@ -4,61 +4,40 @@
 
 
 #include <iostream>
-#include <SFML/graphics.hpp>
-
 #include <chip8_2.h>
-#include <ResourceHolder.hpp>
-
-namespace Textures {
-	enum ID {
-		Landscape,
-		Airplane,
-	};
-}
-
+#include <game.hpp>
 
 using namespace std;
 
+#include <direct.h>
+#define GetCurrentDir _getcwd
+
 int main()
 {
+	// load ROM file
+	// have a class for CPU model
+	// will have copy of CPU model in our class
+	// for each line of ROM, we will execute the instructions (some changes in memory)
+	// 
 	cout << "Hello CMake." << endl;
 
-	sf::RenderWindow window(sf::VideoMode(640, 480), "Resources");
-	window.setFramerateLimit(20);
+	// std::ifstream rom_file("ROMs\\IBM_Logo.ch8", std::ios::binary | std::ios::ate);
+	// std::string rom_fname ("ROMs\\IBM_Logo.ch8");
+	std::string rom_fname ("ROMs\\test_opcode.ch8");
+	// std::string rom_fname ("ROMs\\bc_test.ch8");
 
-	// Try to load resources
-	ResourceHolder<sf::Texture, Textures::ID> textures;
-	try
-	{
-		textures.load(Textures::Landscape, "Media/Textures/Desert.png");
-		textures.load(Textures::Airplane, "Media/Textures/Eagle.png");
-	}
-	catch (std::runtime_error& e)
-	{
-		std::cout << "Exception: " << e.what() << std::endl;
-		return 1;
-	}
+	bool debugEnable = false;
+	
+	Game chip8_emu;
 
-	// Access resources
-	sf::Sprite landscape(textures.get(Textures::Landscape));
-	sf::Sprite airplane(textures.get(Textures::Airplane));
-	airplane.setPosition(200.f, 200.f);
+	chip8_emu.initialize(rom_fname, debugEnable);
 
+	chip8_emu.run();
 
-	while (window.isOpen())
-	{
-		sf::Event event;
-		while (window.pollEvent(event))
-		{
-			if (event.type == sf::Event::KeyPressed || event.type == sf::Event::Closed)
-				return 0;
-		}
+	// small snippet to check current directory
+	char buff[FILENAME_MAX]; //create string buffer to hold path
+   	GetCurrentDir( buff, FILENAME_MAX );
+	std::cout << __func__ << ": current cwd is " << string(buff) << std::endl;
+	// end of snippet
 
-		window.clear();
-		window.draw(landscape);
-		window.draw(airplane);
-		window.display();
-	}
 }
-
-
