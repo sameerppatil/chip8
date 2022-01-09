@@ -9,7 +9,7 @@ Game::Game()
 : mWindow(sf::VideoMode(static_cast<std::uint32_t>(64 * scalingFactor), static_cast<std::uint32_t>(32 * scalingFactor)), "Chip8-Emulator", sf::Style::Close),
 rectanglePixel(sf::Vector2f(scalingFactor, scalingFactor)),
 debugWindow(sf::VideoMode(static_cast<std::uint32_t>(60 * scalingFactor), static_cast<std::uint32_t>(60 * scalingFactor)), "DebugWindow", sf::Style::Close) {
-    std::cout << "Init the Game class" << std::endl;
+    
 }
 
 void Game::initialize(std::string& fs, bool debugEnable) {
@@ -30,7 +30,6 @@ void Game::initialize(std::string& fs, bool debugEnable) {
     mWindow.display();
 }
 void Game::run(void) {
-    std::cout << "entering the while loop" << std::endl;
     
     while(mWindow.isOpen()) {
         sf::Event event;

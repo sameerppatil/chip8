@@ -3,8 +3,10 @@
 #include <fstream>
 #include <iomanip>
 
-#define ROM_START_ADDRESS 0x200
-#define FONT_START_LOCATION 0x50
+#define ROM_START_ADDRESS 0x200u
+#define ROM_END_ADDRESS 0x1000u
+#define FONT_START_LOCATION 0x50u
+#define INIT_MEMORY	0x0u
 
 class CPU {
 private:
@@ -15,6 +17,13 @@ private:
 	uint16_t pc{};
 	uint16_t stack[16]{};
 	uint8_t stack_pointer{};
+
+
+	// opcode specific portions
+	uint8_t vx_id;
+	uint8_t vy_id;
+	uint8_t nn;
+	uint16_t nnn;
 	
 	uint8_t delay_timer{};
 	uint8_t sound_timer{};
@@ -47,6 +56,12 @@ public:
 	void initialize(void);
 	void emulateCycle(void);
 
+	void extract_vx_nibble(void);
+	void extract_vy_nibble(void);
+	void extract_nn_nibbles(void);
+	void extract_nnn_nibbles(void);
+
+	
 };
 
 #define CHIP8_OPCODE_CALL_ROUTINE 0x0000
@@ -98,12 +113,12 @@ public:
 #define CHIP8_PARTIAL_OPCODE_LOAD_ALL_REGS_FROM_INDEX_REG_MEM 0xF065
 // partial opcodes end
 
-#define EXTRACT_FIRST_NIBBLE 0xF000
-#define EXTRACT_NNN_NIBBLES 0x0FFF
-#define EXTRACT_VX_NIBBLE 0x0F00
-#define EXTRACT_VY_NIBBLE 0x00F0
-#define EXTRACT_NN_NIBBLES 0x00FF
-#define EXTRACT_FIRST_AND_LAST_NIBBLES 0xF00F
-#define EXTRACT_FIRST_THIRD_LAST_NIBBLES 0xF0FF
-#define EXTRACT_LAST_NIBBLE 0x000F
+#define FIRST_NIBBLE_MASK 				0xF000
+#define NNN_NIBBLES_MASK 				0x0FFF
+#define VX_NIBBLE_MASK 					0x0F00
+#define VY_NIBBLE_MASK 					0x00F0
+#define NN_NIBBLES_MASK 				0x00FF
+#define FIRST_AND_LAST_NIBBLES_MASK 	0xF00F
+#define FIRST_THIRD_LAST_NIBBLES_MASK 	0xF0FF
+#define LAST_NIBBLE_MASK 				0x000F
 

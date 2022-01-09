@@ -5,8 +5,6 @@
 #include <cpu.hpp>
 #include <SFML/Graphics.hpp>
 
-#define ROM_START_ADDRESS 0x200
-
 class Game {
 private:
 	// SFML stuff
