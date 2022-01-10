@@ -23,8 +23,8 @@ int main()
 
 	// std::ifstream rom_file("ROMs\\IBM_Logo.ch8", std::ios::binary | std::ios::ate);
 	// std::string rom_fname ("ROMs\\IBM_Logo.ch8");
-	// std::string rom_fname ("ROMs\\test_opcode.ch8");
-	std::string rom_fname ("ROMs\\bc_test.ch8");
+	std::string rom_fname ("ROMs\\test_opcode.ch8");
+	// std::string rom_fname ("ROMs\\bc_test.ch8");
 
 	bool debugEnable = false;
 	

@@ -80,9 +80,6 @@ void CPU::extract_nnn_nibbles(void) {
 void CPU::emulateCycle(void) {
     // printf("%s: entered\n", __func__);
 
-    uint8_t nn;
-    uint16_t nnn;
-    uint16_t old_vx, old_vy;
     // fetch cycle
     opcode = static_cast<uint16_t>(memory[pc] << 8u) | static_cast<uint16_t>(memory[pc+1]);
     pc +=2;
@@ -113,10 +110,10 @@ void CPU::emulateCycle(void) {
 
         case CHIP8_OPCODE_VX_EQUAL_CONST:
         {
-            old_vx = static_cast<uint16_t>((opcode & VX_NIBBLE_MASK) >> 8);
-            nn = static_cast<uint8_t>(opcode & NN_NIBBLES_MASK);
+            extract_nn_nibbles();
+            extract_vx_nibble();
             
-            if(regV[old_vx] == nn) {
+            if(regV[vx_id] == nn) {
                 pc += 2; 
                 std::cout << __func__ << ": Setting PC to " << std::hex << pc << std::endl;
             }
@@ -128,10 +125,9 @@ void CPU::emulateCycle(void) {
 
         case CHIP8_OPCODE_VX_NOT_EQUAL_CONST:
         {
-            old_vx = static_cast<uint16_t>((opcode & VX_NIBBLE_MASK) >> 8);
-            nn = static_cast<uint8_t>(opcode & NN_NIBBLES_MASK);
-            
-            if(regV[old_vx] != nn) {
+            extract_vx_nibble();
+            extract_nn_nibbles();
+            if(regV[vx_id] != nn) {
                 pc += 2;
                 std::cout << __func__ << ": Setting PC to " << std::hex << pc << std::endl;
             }
@@ -143,10 +139,10 @@ void CPU::emulateCycle(void) {
 
         case CHIP8_OPCODE_VX_EQUAL_VY:
         {
-            old_vx = static_cast<uint16_t>((opcode & VX_NIBBLE_MASK) >> 8);
-            old_vy = static_cast<uint16_t>((opcode & VY_NIBBLE_MASK) >> 4);
-            
-            if(regV[old_vx] == regV[old_vy]) {
+            extract_vx_nibble();
+            extract_vy_nibble();
+
+            if(regV[vx_id] == regV[vy_id]) {
                 pc += 2;
                 std::cout << __func__ << ": Setting PC (skip) to " << std::hex << pc << std::endl;
             }
@@ -156,28 +152,31 @@ void CPU::emulateCycle(void) {
             break;
         }
         case CHIP8_OPCODE_SET_REG_INDEX_TO_ADDR:
-            index = static_cast<uint16_t>(opcode & NNN_NIBBLES_MASK);
+        {
+            extract_nnn_nibbles();
+            index = nnn;
             std::cout << __func__ << ": emulating setting index register, index register is now: " << std::hex << index << std::endl;
             
             break;
+        }
         
         case CHIP8_OPCODE_SET_VX_TO_CONST:
         {
-            old_vx = static_cast<uint16_t>((opcode & VX_NIBBLE_MASK) >> 8);
-            if(old_vx >= 16) {
-                std::cout << __func__ << ": Illegal Vx provided " << old_vx << std::endl;
+            extract_vx_nibble();
+            if(vx_id >= 16) {
+                std::cout << __func__ << ": Illegal Vx provided " << vx_id << std::endl;
                 exit(1);
             }
             else {
-                regV[old_vx] = static_cast<uint8_t>(opcode & NN_NIBBLES_MASK);
+                regV[vx_id] = static_cast<uint8_t>(opcode & NN_NIBBLES_MASK);
             }
-            std::cout << __func__ << ": Setting register " << old_vx << " to " << std::hex << static_cast<uint16_t>(opcode & NN_NIBBLES_MASK) << std::endl;
+            std::cout << __func__ << ": Setting register " << vx_id << " to " << std::hex << static_cast<uint16_t>(opcode & NN_NIBBLES_MASK) << std::endl;
             break;
         }
 
         case CHIP8_OPCODE_JUMP_TO_ADDR_PLUS_V00:
         {
-            nnn = static_cast<uint16_t>(opcode & NNN_NIBBLES_MASK);
+            extract_nnn_nibbles();
             pc = regV[0] + nnn;
             std::cout << __func__ << ": Setting PC to " << std::hex << pc << std::endl;
             break;
@@ -185,10 +184,10 @@ void CPU::emulateCycle(void) {
 
         case CHIP8_OPCODE_SET_VX_TO_RAND_AND_NN:
         {
-            old_vx = static_cast<uint16_t>((opcode & VX_NIBBLE_MASK) >> 8);
-            nn = static_cast<uint8_t>(opcode & NN_NIBBLES_MASK);
-            regV[old_vx] = rand() % nn;
-            std::cout << __func__ << ": Setting reg[" << std::dec << old_vx << "]: to: " << std::hex << static_cast<uint16_t>(regV[old_vx]) << std::endl;
+            extract_vx_nibble();
+            extract_nn_nibbles();
+            regV[vx_id] = rand() % nn;
+            std::cout << __func__ << ": Setting reg[" << std::dec << vx_id << "]: to: " << std::hex << static_cast<uint16_t>(regV[vx_id]) << std::endl;
             break;
         }
         case CHIP8_PARTIAL_OPCODE_KEYPAD_PRESSED:
@@ -206,35 +205,33 @@ void CPU::emulateCycle(void) {
 
         case CHIP8_PARTIAL_OPCODE_MISC_OPCODES:
         {
-            old_vx = static_cast<uint16_t>((opcode & VX_NIBBLE_MASK) >> 8);
+            extract_vx_nibble();
 
             if((opcode & 0xF0FFu) == CHIP8_PARTIAL_OPCODE_SET_VX_TO_DELAY) {
-                regV[old_vx] = delay_timer;
+                regV[vx_id] = delay_timer;
             }
             else if((opcode & 0xF0FFu) == CHIP8_PARTIAL_OPCODE_SET_VX_TO_KEYPAD) {
                 std::cout << __func__ << "-debug: " << std::hex << opcode << " key code not implemented;" << std::endl;
                 exit(1);
             }
             else if((opcode & 0xF0FFu) == CHIP8_PARTIAL_OPCODE_SET_DELAY_TIMER_TO_VX) {
-                delay_timer = regV[old_vx];
+                delay_timer = regV[vx_id];
             }
             else if((opcode & 0xF0FFu) == CHIP8_PARTIAL_OPCODE_SET_SOUND_TIMER_TO_VX) {
-                sound_timer = regV[old_vx];
+                sound_timer = regV[vx_id];
             }
             else if((opcode & 0xF0FFu) == CHIP8_PARTIAL_OPCODE_SET_INDX_REG_TO_INDEX_REG_PLUS_VX) {
-                index += static_cast<uint16_t>(regV[old_vx]);
+                index += static_cast<uint16_t>(regV[vx_id]);
             }
             else if((opcode & 0xF0FFu) == CHIP8_PARTIAL_OPCODE_SET_INDX_REG_SPRITE_ADD_OF_VX) {
-                uint8_t num = regV[old_vx];
+                uint8_t num = regV[vx_id];
                 index = FONT_START_LOCATION + (5 * num);
             }
             else if((opcode & 0xF0FFu) == CHIP8_PARTIAL_OPCODE_BCD_OF_VX) {
                 memory[index]     = regV[(opcode & 0x0F00) >> 8] / 100;
                 memory[index + 1] = (regV[(opcode & 0x0F00) >> 8] / 10) % 10;
                 memory[index + 2] = (regV[(opcode & 0x0F00) >> 8] % 100) % 10;
-                std::cout << __func__ << "-debug: " << std::hex << opcode << " key code not implemented;" << std::endl;
-             
-                // uint8_t num = regV[old_vx];
+                // uint8_t num = regV[vx_id];
 
                 // memory[index + 2] = num % 10;
                 // num /= 10;
@@ -246,15 +243,15 @@ void CPU::emulateCycle(void) {
                                 
             }
             else if((opcode & 0xF0FFu) == CHIP8_PARTIAL_OPCODE_DUMP_ALL_REGS_TO_INDX_REG_MEM) {
-                uint16_t vx = old_vx;
+                uint16_t vx = vx_id;
                 for(uint16_t i = 0; i <= vx; ++i) {
                     memory[index + i] = regV[i];
                     
                 }
             }
             else if((opcode & 0xF0FFu) == CHIP8_PARTIAL_OPCODE_LOAD_ALL_REGS_FROM_INDEX_REG_MEM) {
-                std::cout << __func__ << ": vx ID is " << static_cast<uint16_t>(old_vx) << ", contents are " << static_cast<uint16_t>(regV[old_vx]) << std::endl;
-                uint16_t vx = old_vx;
+                std::cout << __func__ << ": vx ID is " << static_cast<uint16_t>(vx_id) << ", contents are " << static_cast<uint16_t>(regV[vx_id]) << std::endl;
+                uint16_t vx = vx_id;
                 for(uint16_t i = 0; i <= static_cast<uint16_t>(vx); ++i) {
                     std::cout << __func__ << ": copying from memory[ " << std::hex << static_cast<uint16_t>(index + i) << "] to regV["
                         << std::dec << static_cast<uint16_t>(i)  << "]" << std::endl;
@@ -271,19 +268,19 @@ void CPU::emulateCycle(void) {
 
         case CHIP8_OPCODE_DISPLAY:
             {
-                std::cout << __func__ << ": got call for displaying something: " << std::setfill('0') << std::setw(3) << (opcode & 0x0FFF) << std::endl;          
-                old_vx = static_cast<uint16_t>((opcode & VX_NIBBLE_MASK) >> 8);
-                old_vy = static_cast<uint16_t>((opcode & VY_NIBBLE_MASK) >> 4);
+                std::cout << __func__ << ": got call for displaying something: " << std::setfill('0') << std::setw(3) << (opcode & 0x0FFF) << std::endl;
+                extract_vx_nibble();
+                extract_vy_nibble();
                 
                 uint8_t ht;
                 ht = static_cast<uint8_t>((opcode & LAST_NIBBLE_MASK));
 
-                std::cout << __func__ << ": old_vx-> " << old_vx << ", old_vy-> " << old_vy << ", ht-> " << static_cast<uint16_t>(ht) <<  std::endl;
+                std::cout << __func__ << ": vx_id-> " << vx_id << ", vy_id-> " << vy_id << ", ht-> " << static_cast<uint16_t>(ht) <<  std::endl;
                 
-                uint8_t cordinate_x = regV[old_vx] % 64;
-                uint8_t cordinate_y = regV[old_vy] % 32;
+                uint8_t cordinate_x = regV[vx_id] % 64;
+                uint8_t cordinate_y = regV[vy_id] % 32;
 
-                std::cout << __func__ << ": Contents: old_vx-> " << static_cast<uint16_t>(cordinate_x) << ", old_vy-> " << static_cast<uint16_t>(cordinate_y) <<
+                std::cout << __func__ << ": Contents: vx_id-> " << static_cast<uint16_t>(cordinate_x) << ", vy_id-> " << static_cast<uint16_t>(cordinate_y) <<
                     ", index reg is: " << std::hex << index<< std::endl;
 
                 // set carry flag to zero
@@ -299,8 +296,6 @@ void CPU::emulateCycle(void) {
                                 regV[0xF] = 1;
                             }
                             display[pixIndex] ^= 1;
-                            // std::cout << __func__ << "-debug: spritePixel: " << static_cast<uint16_t>(spritePixel)
-                                // << ", pixindex: " << std::dec << pixIndex << ", display mem: " << display[pixIndex] << std::endl;
                         }
                     }
                 }
@@ -312,11 +307,11 @@ void CPU::emulateCycle(void) {
 
         case CHIP8_OPCODE_ADD_NN_TO_VX:
         {
-            old_vx = static_cast<uint16_t>((opcode & VX_NIBBLE_MASK) >> 8);
-            nn = static_cast<uint8_t>(opcode & NN_NIBBLES_MASK);
-            std::cout << __func__ << ": Before old_vx-> " << old_vx << ", Reg contents: " << static_cast<uint16_t>(regV[old_vx]) << ", nn-> " << static_cast<uint16_t>(nn) <<  std::endl;
-            regV[old_vx] += nn;
-            std::cout << __func__ << ": After old_vx-> " << old_vx << ", Reg contents: " << static_cast<uint16_t>(regV[old_vx]) << ", nn-> " << static_cast<uint16_t>(nn) <<  std::endl;
+            extract_vx_nibble();
+            extract_nn_nibbles();
+            std::cout << __func__ << ": Before old_vx-> " << vx_id << ", Reg contents: " << static_cast<uint16_t>(regV[vx_id]) << ", nn-> " << static_cast<uint16_t>(nn) <<  std::endl;
+            regV[vx_id] += nn;
+            std::cout << __func__ << ": After vx_id-> " << vx_id << ", Reg contents: " << static_cast<uint16_t>(regV[vx_id]) << ", nn-> " << static_cast<uint16_t>(nn) <<  std::endl;
             
         
             break;
@@ -324,7 +319,7 @@ void CPU::emulateCycle(void) {
 
         case CHIP8_OPCODE_JUMP_TO_ADDR:
         {
-            nnn = static_cast<uint16_t>(opcode & NNN_NIBBLES_MASK);
+            extract_nnn_nibbles();
             std::cout << __func__ << ": Jump provided address: " << std::hex << nnn << std::endl;
             if(nnn < 0x1000) {
                 pc = nnn;
@@ -339,7 +334,7 @@ void CPU::emulateCycle(void) {
         case CHIP8_OPCODE_CALL_SUBROUTINE:
         {
             std::cout << __func__ << ": Saving PC to stack " << std::hex << static_cast<uint16_t>(pc) << std::endl;
-            nnn = static_cast<uint16_t>(opcode & NNN_NIBBLES_MASK);
+            extract_nnn_nibbles();
             stack[stack_pointer] = pc;
             ++stack_pointer;
             pc = nnn; 
@@ -350,57 +345,57 @@ void CPU::emulateCycle(void) {
 
         case CHIP8_PARTIAL_OPCODE_ASSIGN_VX_TO_VY:
         {
-            old_vx = static_cast<uint16_t>((opcode & VX_NIBBLE_MASK) >> 8);
-            old_vy = static_cast<uint16_t>((opcode & VY_NIBBLE_MASK) >> 4);
-            
+            extract_vx_nibble();
+            extract_vy_nibble();
+
             if((opcode & 0xF00F) == CHIP8_PARTIAL_OPCODE_ASSIGN_VX_TO_VY) {
-                regV[old_vx] = regV[old_vy];
+                regV[vx_id] = regV[vy_id];
             }
             else if((opcode & 0xF00F) == CHIP8_PARTIAL_OPCODE_SET_VX_TO_VY_OR_VX) {
-                regV[old_vx] = regV[old_vx] | regV[old_vy];
+                regV[vx_id] = regV[vx_id] | regV[vy_id];
             }
             else if((opcode & 0xF00F) == CHIP8_PARTIAL_OPCODE_SET_VX_TO_VY_AND_VX) {
-                regV[old_vx] = regV[old_vx] & regV[old_vy];
+                regV[vx_id] = regV[vx_id] & regV[vy_id];
             }
             else if((opcode & 0xF00F) == CHIP8_PARTIAL_OPCODE_SET_VX_TO_VY_XOR_VX) {
-                regV[old_vx] = regV[old_vx] ^ regV[old_vy];
+                regV[vx_id] = regV[vx_id] ^ regV[vy_id];
             }
             else if((opcode & 0xF00F) == CHIP8_PARTIAL_OPCODE_SET_VX_TO_VY_PLUS_VX) {
-                if(regV[old_vx] + regV[old_vy] > 0xffu) {
-                    regV[old_vx] = regV[old_vx] + regV[old_vy];
+                if(regV[vx_id] + regV[vy_id] > 0xffu) {
+                    regV[vx_id] = regV[vx_id] + regV[vy_id];
                     regV[0xf] = 1u; 
                 }
                 else {
-                    regV[old_vx] = regV[old_vx] + regV[old_vy];
+                    regV[vx_id] = regV[vx_id] + regV[vy_id];
                     regV[0xf] = 0u;
                 }
             }
             else if((opcode & 0xF00F) == CHIP8_PARTIAL_OPCODE_SET_VX_TO_VX_MINUS_VY) {
-                if(regV[old_vx] > regV[old_vy]) {
+                if(regV[vx_id] > regV[vy_id]) {
                     regV[0xf] = 1u;
                 }
                 else {
                     regV[0xf] = 0u;   
                 }
-                regV[old_vx] -= regV[old_vy];
+                regV[vx_id] -= regV[vy_id];
             }
             else if((opcode & 0xF00F) == CHIP8_PARTIAL_OPCODE_SET_RIGHT_SHIFT_VX) {
-                regV[0xf] = regV[old_vx] & 0x1u; 
+                regV[0xf] = regV[vx_id] & 0x1u; 
                 
-                regV[old_vx] = regV[old_vx] >> 1;
+                regV[vx_id] = regV[vx_id] >> 1;
             }
             else if((opcode & 0xF00F) == CHIP8_PARTIAL_OPCODE_SET_VX_TO_VY_MINUS_VX) {
-                if(regV[old_vy] > regV[old_vx]) {
+                if(regV[vy_id] > regV[vx_id]) {
                     regV[0xf] = 1u;
                 }
                 else {
                     regV[0xf] = 0u;   
                 }
-                regV[old_vx] = regV[old_vy] - regV[old_vx];
+                regV[vx_id] = regV[vy_id] - regV[vx_id];
             }
             else if((opcode & 0xF00F) == CHIP8_PARTIAL_OPCODE_SET_LEFT_SHIFT_VX) {
-                regV[0xf] = (regV[old_vx] & 0x80u) >> 7u;
-                regV[old_vx] = regV[old_vx] << 1;
+                regV[0xf] = (regV[vx_id] & 0x80u) >> 7u;
+                regV[vx_id] = regV[vx_id] << 1;
             }
             else {
                 ; // do nothing
@@ -410,10 +405,10 @@ void CPU::emulateCycle(void) {
 
         case CHIP8_OPCODE_SKIP_NEXT_IF_VX_NOT_EQUAL_TO_VY:
         {
-            old_vx = static_cast<uint16_t>((opcode & VX_NIBBLE_MASK) >> 8);
-            old_vy = static_cast<uint16_t>((opcode & VY_NIBBLE_MASK) >> 4);
+            extract_vx_nibble();
+            extract_vy_nibble();
 
-            if(regV[old_vx] != regV[old_vy]) {
+            if(regV[vx_id] != regV[vy_id]) {
                 pc += 2;
             }
         
